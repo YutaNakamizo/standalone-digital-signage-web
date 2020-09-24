@@ -139,10 +139,12 @@
       "react-app"
     ],
     "plugins": [
-      "module:babel-root-import",
-      {
-        "rootPathSuffix": "src"
-      }
+      [
+        "module:babel-root-import",
+        {
+          "rootPathSuffix": "src"
+        }
+      ]
     ]
   },
   "devDependencies": {
