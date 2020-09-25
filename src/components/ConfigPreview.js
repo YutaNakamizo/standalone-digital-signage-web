@@ -55,7 +55,7 @@ export const ConfigPreview = ({
                   data={editableImage.getData()}
                   position={editableObject.getPosition()}
                   size={editableObject.getSize()}
-                  onFocus={e => onObjectFocus(e, object)}
+                  onFocus={e => onObjectFocus(e, object, false)}
                   onRemove={editableObject.remove}
                   className={activeObjects.includes(object) ? classes.activeObject : ''}
                   {...props}

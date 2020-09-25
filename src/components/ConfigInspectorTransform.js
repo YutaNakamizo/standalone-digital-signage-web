@@ -151,6 +151,7 @@ export const ConfigInspectorTransform = ({
                   />
                 }
                 label="縦横比を固定"
+                disabled={!activeObjects[0]}
               />
             </Grid>
           </Grid>

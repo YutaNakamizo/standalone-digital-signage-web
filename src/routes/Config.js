@@ -183,8 +183,8 @@ export const Config = ({
     }
   };
 
-  const handleObjectFocused = (e, object) => {
-    setActiveObjects([ ...activeObjects, object ]);
+  const handleObjectFocused = (e, object, add) => {
+    setActiveObjects([ ...(add ? activeObjects : []), object ]);
   };
   const handleObjectBlurred = (e, object) => {
     const blurred = [ ...activeObjects ];
