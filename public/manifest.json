@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "name": "Standalone Digital Signage Web",
+  "short_name": "Digital Signage Web",
+  "description": "Web で簡単に作成できるデジタルサイネージ",
   "icons": [
     {
       "src": "favicon.ico",
