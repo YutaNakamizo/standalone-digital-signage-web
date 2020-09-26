@@ -31,8 +31,16 @@ export const ConfigInspectorLayerControl = ({
         レイヤー
       </Typography>
       <List dense={true}>
-        <DragContainer dragHandleSelector=".item-drag-handle" onDrop={handleItemMoved}>
-          {objects.map((object, index) => {
+        <DragContainer
+          dragHandleSelector=".item-drag-handle"
+          onDrop={({ removedIndex, addedIndex }) => {
+            handleItemMoved({
+              removedIndex: objects.length - 1 - removedIndex,
+              addedIndex: objects.length - 1 - addedIndex,
+            })
+          }}
+        >
+          {objects.reverse().map((object, index) => {
             const { getName } = objectEditer(object);
             return (
               <Draggable key={index}>

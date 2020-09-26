@@ -3,7 +3,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import {
   Box,
 } from '@material-ui/core';
-import { Image } from '~/components/Image';
+import { SignageObject } from '~/components/SignageObject';
 
 const useStyle = makeStyles(theme => ({
   preview: {
@@ -28,6 +28,7 @@ export const ConfigPreview = ({
   objectEditer,
   imageEditor,
   onObjectFocus,
+  onObjectMentioned,
   onBlur,
   ...props
 }) => {
@@ -46,26 +47,17 @@ export const ConfigPreview = ({
       {
         objects.map(object => {
           const editableObject = objectEditer(object);
-          const editableImage = imageEditor(object);
-          switch(editableObject.getType()) {
-            case 'image':
-              return (
-                <Image
-                  key={editableObject.getId()}
-                  data={editableImage.getData()}
-                  position={editableObject.getPosition()}
-                  size={editableObject.getSize()}
-                  onFocus={e => onObjectFocus(e, object, false)}
-                  onRemove={editableObject.remove}
-                  className={activeObjects.includes(object) ? classes.activeObject : ''}
-                  {...props}
-                />
-              );
-              break;
-            default:
-              console.warn('Unkown object type is detected.');
-              return;
-          }
+          return (
+            <SignageObject
+              key={editableObject.getId()}
+              object={object}
+              objectEditer={objectEditer}
+              imageEditor={imageEditor}
+              className={activeObjects.includes(object) ? classes.activeObject : ''}
+              onFocus={e => onObjectFocus(e, object, false)}
+              onMentioned={e => onObjectMentioned(e, object)}
+            />
+          );
         })
       }
     </Box>
