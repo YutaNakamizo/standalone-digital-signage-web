@@ -7,8 +7,9 @@ import {
   FormControlLabel, Checkbox,
 } from '@material-ui/core';
 import { ConfigInspectorTransform as Transform } from '~/components/ConfigInspectorTransform';
-import { ConfigInspectorLayerControl as LayerControl } from '~/components/ConfigInspectorLayerControl';
+import { ConfigInspectorAppearance as Appearance } from '~/components/ConfigInspectorAppearance';
 import { ConfigInspectorOperations as Operations } from '~/components/ConfigInspectorOperations';
+import { ConfigInspectorLayerControl as LayerControl } from '~/components/ConfigInspectorLayerControl';
 
 export const ConfigInspector = (props) => {
   return (
@@ -16,6 +17,13 @@ export const ConfigInspector = (props) => {
       <Box margin={2}>
         <Paper>
           <Transform
+            {...props}
+          />
+        </Paper>
+      </Box>
+      <Box margin={2}>
+        <Paper>
+          <Appearance
             {...props}
           />
         </Paper>

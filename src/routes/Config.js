@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import QRCode from 'qrcode';
 import { makeStyles } from '@material-ui/core/styles';
 import {
   AppBar, Toolbar,
@@ -10,8 +11,10 @@ import {
   Container,
 } from '@material-ui/core';
 import InsertPhotoOutlinedIcon from '@material-ui/icons/InsertPhotoOutlined';
+import { QrCodeIcon } from '~/components/QrCodeIcon';
 import { ConfigPreview as Preview } from '~/components/ConfigPreview';
 import { ConfigInspector as Inspector } from '~/components/ConfigInspector';
+import { ConfigQrEditor as QrEditor } from '~/components/ConfigQrEditor';
 
 const SignageObject = class {
   constructor({
@@ -61,14 +64,12 @@ const SignageObject = class {
 
 const SignageImage = class extends SignageObject {
   constructor({
+    type = 'image',
     name,
     data,
     ...props
   }) {
-    super({
-      type: 'image',
-      name,
-    });
+    super({ type, name });
     this.data = data;
   }
   init() {
@@ -98,9 +99,45 @@ const SignageImage = class extends SignageObject {
   }
 };
 
+const SignageQr = class extends SignageImage {
+  constructor({
+    type = 'qr',
+    name,
+    text,
+    ...props
+  }) {
+    super({ type, name });
+    this.text = text;
+  }
+  async init() {
+    this.data = await QRCode.toDataURL(this.text);
+    await super.init();
+    return this;
+  }
+  export() {
+    const reduced = super.export();
+    for(let key of [
+      'data',
+      'originalWidth',
+      'originalHeight',
+    ]) delete reduced[key];
+    for(let key of [
+      'text',
+    ]) reduced[key] = this[key];
+    return reduced;
+  }
+  static async import(props) {
+    const qr = new SignageQr(props);
+    for(let key in props) qr[key] = props[key];
+    await qr.init();
+    return qr;
+  }
+};
+
 const useStyle = makeStyles(theme => ({
   toolButton: {
     minWidth: 'auto',
+    marginRight: theme.spacing(1),
   },
   previewContainerFrame: {
     padding: theme.spacing(3),
@@ -128,6 +165,9 @@ export const Config = ({
   const [ activeObjects, setActiveObjects ] = useState([]);
   const [ objects, setObjects ] = useState([]);
 
+  const [ qrDialogIsOpen, setQrDialogIsOpen ] = useState(false);
+  const [ qrDialogSource, setQrDialogSource ] = useState(null);
+
   const saveSignage = () => {
     const signage = {
       lastUpdatedTime: new Date().getTime(),
@@ -140,14 +180,18 @@ export const Config = ({
     console.log(`Saved! [${signage['lastUpdatedTime']}]`);
   };
 
-  const loadSignage = id => {
+  const loadSignage = async id => {
     const signage = JSON.parse(window.localStorage.getItem(`app.ggtk.signage/first-signage`));
+    if(!signage) return false;
     const { objects: propsList } = signage;
     const objects = [];
     for(let props of propsList) {
       switch(props.type) {
         case 'image':
           objects.push(SignageImage.import(props));
+          break;
+        case 'qr':
+          objects.push(await SignageQr.import(props));
           break;
         default:
           objects.push(SignageObject.import(props));
@@ -172,15 +216,18 @@ export const Config = ({
       reader.onload = async () => {
         const data = reader.result;
         const image = await new SignageImage({ data }).init();
-        handleObjectEdit(image).setSize({
-          width: image.originalWidth / screenSize.width * 100,
-          height: image.originalHeight / screenSize.height * 100,
-        });
-        setObjects([ ...objects, image ]);
-        handleObjectFocused({}, image);
+        renderImageObject(image);
       };
       reader.readAsDataURL(file);
     }
+  };
+  const renderImageObject = image => {
+    handleObjectEdit(image).setSize({
+      width: image.originalWidth / screenSize.width * 100,
+      height: image.originalHeight / screenSize.height * 100,
+    });
+    setObjects([ ...objects, image ]);
+    handleObjectFocused({}, image);
   };
 
   const handleObjectFocused = (e, object, add) => {
@@ -196,6 +243,16 @@ export const Config = ({
   const handleBlurred = e => {
     setActiveObjects([]);
   }
+  const handleObjectMentioned = (e, object) => {
+    const editableObject = handleObjectEdit(object);
+    switch(editableObject.getType()) {
+      case 'qr':
+        openQrDialog(object)
+        break;
+      default:
+        break;
+    }
+  };
 
   const handleObjectEdit = object => {
     return {
@@ -273,8 +330,23 @@ export const Config = ({
   };
   const handleImageEdit = object => {
     return {
+      ...handleObjectEdit(object),
       getData: () => {
         return object.data;
+      },
+    };
+  };
+  const handleQrEdit = object => {
+    return {
+      ...handleImageEdit(object),
+      getText: () => {
+        return object.text;
+      },
+      setText: async text => {
+        object.text = text;
+        await object.init();
+        setActiveObjects([ ...activeObjects ]);
+        return object;
       },
     };
   };
@@ -287,6 +359,28 @@ export const Config = ({
     console.log(objects.map(object => object.id).join('\n'))
     console.log(ordered.map(object => object.id).join('\n'))
     setObjects(ordered);
+  };
+
+
+  const openQrDialog = object => {
+    setQrDialogIsOpen(true);
+    setQrDialogSource(object ? handleQrEdit(object) : null);
+  };
+
+  const closeQrDialog = e => {
+    setQrDialogIsOpen(false);
+  };
+
+  const createQr = async text => {
+    const qr = new SignageQr({ text });
+    await qr.init();
+    renderImageObject(qr);
+    closeQrDialog();
+  };
+
+  const modifyQr = (editableQr, text) => {
+    editableQr.setText(text);
+    closeQrDialog();
   };
 
 
@@ -336,6 +430,17 @@ export const Config = ({
                 </Button>
               </Tooltip>
             </label>
+            <Tooltip title="QR コードを追加">
+              <Button
+                color="inherit"
+                component="span"
+                size="small"
+                className={classes.toolButton}
+                onClick={() => openQrDialog(null)}
+              >
+                <QrCodeIcon />
+              </Button>
+            </Tooltip>
           </Toolbar>
         </Container>
       </AppBar>
@@ -352,6 +457,7 @@ export const Config = ({
                     objectEditer={handleObjectEdit}
                     imageEditor={handleImageEdit}
                     onObjectFocus={handleObjectFocused}
+                    onObjectMentioned={handleObjectMentioned}
                     onBlur={handleBlurred}
                   />
                  </Paper>
@@ -370,6 +476,13 @@ export const Config = ({
           </Box>
         </Box>
       </Container>
+
+      <QrEditor
+        source={qrDialogSource}
+        open={qrDialogIsOpen}
+        onCancel={closeQrDialog}
+        onSubmit={qrDialogSource === null ? createQr : modifyQr}
+      />
     </div>
   );
 };
